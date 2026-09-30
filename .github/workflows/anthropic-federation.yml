@@ -10,9 +10,19 @@ name: Anthropic federation check
 # Optional:
 #   ANTHROPIC_WORKSPACE_ID   (required only if the rule spans several workspaces)
 #   ANTHROPIC_OIDC_AUDIENCE  (must match the audience on the federation issuer)
+#
+# Email tool (Claude sends mail from an Outlook mailbox via Microsoft Graph):
+#   Variables: EMAIL_FROM (sending mailbox), EMAIL_ALLOWED_RECIPIENTS
+#              (comma-separated; Claude can email only these addresses)
+#   Secrets:   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+#              (Entra app registration with the Mail.Send application permission)
 
 on:
   workflow_dispatch:
+    inputs:
+      prompt:
+        description: What to ask Claude (it may email approved recipients)
+        default: Say hello to me by email.
 
 permissions:
   contents: read
@@ -58,16 +68,12 @@ jobs:
           echo "::add-mask::$access_token"
           echo "ACCESS_TOKEN=$access_token" >> "$GITHUB_ENV"
 
-      - name: Call Claude
-        run: |
-          curl -sS --max-time 600 https://api.anthropic.com/v1/messages \
-            -H "authorization: Bearer $ACCESS_TOKEN" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "content-type: application/json" \
-            -d '{
-              "model": "claude-sonnet-5-5",
-              "max_tokens": 16000,
-              "thinking": {"type": "adaptive"},
-              "output_config": {"effort": "high"},
-              "messages": [{"role": "user", "content": "Hello, Claude"}]
-            }' | jq -r '.content[] | select(.type == "text") | .text'
+      - name: Run Claude with email tool
+        env:
+          PROMPT: ${{ inputs.prompt }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          EMAIL_ALLOWED_RECIPIENTS: ${{ vars.EMAIL_ALLOWED_RECIPIENTS }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: scripts/claude_email_agent.sh "$PROMPT"

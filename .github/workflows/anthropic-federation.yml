@@ -71,7 +71,7 @@ jobs:
       - name: Run Claude with email tool
         env:
           PROMPT: ${{ inputs.prompt }}
-          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM || 'a.ashoor@gmg.com' }}
           EMAIL_ALLOWED_RECIPIENTS: ${{ vars.EMAIL_ALLOWED_RECIPIENTS }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}

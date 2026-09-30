@@ -1,0 +1,50 @@
+name: Send email via Outlook
+
+# Sends one email from an Outlook mailbox through Microsoft Graph. Run it from
+# the Actions tab (or ask Claude to trigger it). Only addresses in
+# EMAIL_ALLOWED_RECIPIENTS can receive mail.
+#
+# NOTE: workflow inputs are visible in the run's logs and summary to anyone who
+# can view this repository's Actions. Do not send sensitive content (for
+# example HR data) through this workflow.
+#
+# Repository variables: EMAIL_ALLOWED_RECIPIENTS, EMAIL_FROM (optional; defaults
+#   to a.ashoor@gmg.com)
+# Repository secrets: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+#   (Entra app with the Mail.Send application permission, admin-consented and
+#   restricted to the sending mailbox)
+
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: Recipient (must be on the allowlist)
+        required: true
+      subject:
+        description: Subject
+        required: true
+      body:
+        description: Plain-text body
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send
+        env:
+          TO: ${{ inputs.to }}
+          SUBJECT: ${{ inputs.subject }}
+          BODY: ${{ inputs.body }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM || 'a.ashoor@gmg.com' }}
+          EMAIL_ALLOWED_RECIPIENTS: ${{ vars.EMAIL_ALLOWED_RECIPIENTS }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: scripts/outlook_send.sh "$TO" "$SUBJECT" "$BODY"
